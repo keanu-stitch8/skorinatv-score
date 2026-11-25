@@ -86,6 +86,34 @@ Tombol **Hentikan polling** dan **Mulai polling** di panel operator mengatur apa
 
 Tanpa `DATABASE_URL`, app tetap berjalan seperti sebelumnya di PC vMix dan menyimpan state ke `.scoreboard/`. Mode ini menjadi cadangan bila internet venue putus.
 
+## Grafik statistik pertandingan
+
+Tambahkan **Add Input → Web Browser** di vMix dengan URL berikut. Ukuran 1920×1080 cocok karena artwork berrasio hampir 16:9.
+
+```text
+https://skorina-tv.vercel.app/stats
+```
+
+Latar adalah artwork `public/stats/background.png` (1670×941) tanpa perubahan. App hanya menggambar skor di dua kotak dan isi panel statistik. Persib di kiri, FC Seoul di kanan.
+
+- Skor berasal dari `/api/sportapi`, jadi ikut mode otomatis atau manual operator.
+- Statistik berasal dari API publik ESPN (`afc.cup`, event `401912753`, bisa diganti lewat `ESPN_EVENT_ID`). Tanpa API key dan tanpa kuota SportAPI. Tiap instance server menyimpan respons ESPN 20 detik di memori, dan halaman mengambil `/api/stats` tiap 15 detik, jadi statistik tertinggal paling lama sekitar 35 detik dari ESPN.
+- "–" berarti laga belum dimulai. Setelah kickoff, hitungan yang belum dikirim ESPN tampil 0. Penguasaan bola tetap "–" sampai ESPN mengirim persentasenya.
+- SportAPI tidak menyediakan statistik untuk AFC Champions League Two. Peluang emas terlewat juga tidak ada di ESPN, jadi baris itu diganti tembakan tepat sasaran.
+- API ESPN tidak resmi dan bisa berubah. Bila gagal, panel menampilkan "–" dan skor tetap berjalan.
+
+### Versi GT Title (PSD)
+
+`Skorina-Statistik-Persib-vs-Seoul.psd` (1920×1080, 8-bit) berisi artwork sebagai satu layer gambar dan 30 layer teks asli dalam folder satu tingkat. Import teks sebagai field data memerlukan vMix edisi Advanced atau lebih tinggi. Font teks adalah Segoe UI Semibold dan Segoe UI Black, yang tersedia di Windows.
+
+Tambahkan data source JSON berikut di vMix. Nama kolomnya sama dengan nama layer, misalnya `Skor_Persib`, `Persib_Tembakan`, `Seoul_Umpan`, dan `Persib_KartuKuning`.
+
+```text
+https://skorina-tv.vercel.app/api/stats?format=vmix
+```
+
+Panjang bar perbandingan tidak bisa mengikuti data di GT, jadi PSD hanya berisi track abu-abunya. Gunakan input Web Browser `/stats` bila bar dinamis diperlukan.
+
 ## API lokal dan SportAPI.ai
 
 Untuk mengecek respons JSON, buka URL ini di browser pada PC vMix atau jalankan perintah berikut di PowerShell.

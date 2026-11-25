@@ -4,6 +4,8 @@ export const match = {
   date: '2026-11-25',
   kickoff: '25 November 2026 · 19.15 WIB',
   competition: 'AFC Champions League Two',
+  /** ESPN event for the statistics graphic (league slug `afc.cup` is ACL Two). */
+  espn: { league: 'afc.cup', eventId: '401912753' },
 };
 
 export const periods = {

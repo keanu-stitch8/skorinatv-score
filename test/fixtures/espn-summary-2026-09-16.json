@@ -1,0 +1,266 @@
+{
+ "header": {
+  "competitions": [
+   {
+    "competitors": [
+     {
+      "homeAway": "home",
+      "team": {
+       "displayName": "FC Seoul"
+      }
+     },
+     {
+      "homeAway": "away",
+      "team": {
+       "displayName": "Persib Bandung"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "boxscore": {
+  "teams": [
+   {
+    "homeAway": "home",
+    "team": {
+     "displayName": "FC Seoul"
+    },
+    "statistics": [
+     {
+      "name": "foulsCommitted",
+      "displayValue": "18"
+     },
+     {
+      "name": "yellowCards",
+      "displayValue": "2"
+     },
+     {
+      "name": "redCards",
+      "displayValue": "0"
+     },
+     {
+      "name": "offsides",
+      "displayValue": "1"
+     },
+     {
+      "name": "wonCorners",
+      "displayValue": "6"
+     },
+     {
+      "name": "saves",
+      "displayValue": "1"
+     },
+     {
+      "name": "possessionPct",
+      "displayValue": "59.6"
+     },
+     {
+      "name": "totalShots",
+      "displayValue": "15"
+     },
+     {
+      "name": "shotsOnTarget",
+      "displayValue": "6"
+     },
+     {
+      "name": "shotPct",
+      "displayValue": "0.4"
+     },
+     {
+      "name": "penaltyKickGoals",
+      "displayValue": "0"
+     },
+     {
+      "name": "penaltyKickShots",
+      "displayValue": "0"
+     },
+     {
+      "name": "accuratePasses",
+      "displayValue": "474"
+     },
+     {
+      "name": "totalPasses",
+      "displayValue": "552"
+     },
+     {
+      "name": "passPct",
+      "displayValue": "0.9"
+     },
+     {
+      "name": "accurateCrosses",
+      "displayValue": "0"
+     },
+     {
+      "name": "totalCrosses",
+      "displayValue": "0"
+     },
+     {
+      "name": "crossPct",
+      "displayValue": "0.0"
+     },
+     {
+      "name": "totalLongBalls",
+      "displayValue": "0"
+     },
+     {
+      "name": "accurateLongBalls",
+      "displayValue": "0"
+     },
+     {
+      "name": "longballPct",
+      "displayValue": "0.0"
+     },
+     {
+      "name": "blockedShots",
+      "displayValue": "2"
+     },
+     {
+      "name": "effectiveTackles",
+      "displayValue": "4"
+     },
+     {
+      "name": "totalTackles",
+      "displayValue": "5"
+     },
+     {
+      "name": "tacklePct",
+      "displayValue": "0.8"
+     },
+     {
+      "name": "interceptions",
+      "displayValue": "0"
+     },
+     {
+      "name": "effectiveClearance",
+      "displayValue": "0"
+     },
+     {
+      "name": "totalClearance",
+      "displayValue": "10"
+     }
+    ]
+   },
+   {
+    "homeAway": "away",
+    "team": {
+     "displayName": "Persib Bandung"
+    },
+    "statistics": [
+     {
+      "name": "foulsCommitted",
+      "displayValue": "8"
+     },
+     {
+      "name": "yellowCards",
+      "displayValue": "2"
+     },
+     {
+      "name": "redCards",
+      "displayValue": "0"
+     },
+     {
+      "name": "offsides",
+      "displayValue": "2"
+     },
+     {
+      "name": "wonCorners",
+      "displayValue": "4"
+     },
+     {
+      "name": "saves",
+      "displayValue": "5"
+     },
+     {
+      "name": "possessionPct",
+      "displayValue": "40.4"
+     },
+     {
+      "name": "totalShots",
+      "displayValue": "5"
+     },
+     {
+      "name": "shotsOnTarget",
+      "displayValue": "2"
+     },
+     {
+      "name": "shotPct",
+      "displayValue": "0.4"
+     },
+     {
+      "name": "penaltyKickGoals",
+      "displayValue": "0"
+     },
+     {
+      "name": "penaltyKickShots",
+      "displayValue": "0"
+     },
+     {
+      "name": "accuratePasses",
+      "displayValue": "310"
+     },
+     {
+      "name": "totalPasses",
+      "displayValue": "382"
+     },
+     {
+      "name": "passPct",
+      "displayValue": "0.8"
+     },
+     {
+      "name": "accurateCrosses",
+      "displayValue": "0"
+     },
+     {
+      "name": "totalCrosses",
+      "displayValue": "0"
+     },
+     {
+      "name": "crossPct",
+      "displayValue": "0.0"
+     },
+     {
+      "name": "totalLongBalls",
+      "displayValue": "0"
+     },
+     {
+      "name": "accurateLongBalls",
+      "displayValue": "0"
+     },
+     {
+      "name": "longballPct",
+      "displayValue": "0.0"
+     },
+     {
+      "name": "blockedShots",
+      "displayValue": "0"
+     },
+     {
+      "name": "effectiveTackles",
+      "displayValue": "5"
+     },
+     {
+      "name": "totalTackles",
+      "displayValue": "9"
+     },
+     {
+      "name": "tacklePct",
+      "displayValue": "0.6"
+     },
+     {
+      "name": "interceptions",
+      "displayValue": "0"
+     },
+     {
+      "name": "effectiveClearance",
+      "displayValue": "0"
+     },
+     {
+      "name": "totalClearance",
+      "displayValue": "32"
+     }
+    ]
+   }
+  ]
+ }
+}
