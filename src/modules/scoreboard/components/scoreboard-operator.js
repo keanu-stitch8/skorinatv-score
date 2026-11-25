@@ -124,6 +124,8 @@ export default function ScoreboardOperator({ initial, logout = false }) {
         connectionError={connectionError}
         kickoff={match.kickoff}
         period={live ? periods[live.status] ?? live.status : null}
+        busy={busy}
+        onTogglePolling={(enabled) => send({ type: 'polling', enabled })}
       />
     </main>
   );

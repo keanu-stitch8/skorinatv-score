@@ -82,6 +82,8 @@ Versi online membuat vMix cukup membaca URL HTTPS. PC vMix tidak perlu Node.js a
 
 Polling SportAPI dikoordinasikan lewat kolom `next_check_at`. Request yang jatuh tempo mengambil lease 30 detik secara atomik di Postgres, lalu memanggil SportAPI setelah respons terkirim. Request lain di instance mana pun hanya membaca skor, sehingga vMix, videotron, dan beberapa tab operator tidak memakai kuota untuk pengecekan yang sama.
 
+Tombol **Hentikan polling** dan **Mulai polling** di panel operator mengatur apakah app memanggil SportAPI. Statusnya disimpan di kolom `polling` (Neon) atau `.scoreboard/` (lokal), jadi tetap sama setelah reload, di perangkat lain, dan setelah redeploy. Default-nya aktif. Saat dihentikan, skor otomatis ditahan ke mode manual dan tidak ada request ke SportAPI. Untuk menghemat kuota, hentikan polling sebelum laga dan mulai lagi sekitar 15 menit sebelum kickoff.
+
 Tanpa `DATABASE_URL`, app tetap berjalan seperti sebelumnya di PC vMix dan menyimpan state ke `.scoreboard/`. Mode ini menjadi cadangan bila internet venue putus.
 
 ## API lokal dan SportAPI.ai

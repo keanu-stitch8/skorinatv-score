@@ -1,6 +1,7 @@
-import { CircleAlertIcon, RadioIcon } from 'lucide-react';
+import { CircleAlertIcon, PauseIcon, PlayIcon, RadioIcon } from 'lucide-react';
 import { cn } from 'cn';
 import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 
 const quotaFormat = new Intl.NumberFormat('id-ID');
@@ -21,10 +22,10 @@ function FeedDetail({ label, children }) {
   );
 }
 
-export function SportApiPanel({ snapshot, connectionError, kickoff, period }) {
-  const { live, checkedAt, remaining, interval, error } = snapshot;
-  const feedError = connectionError || error;
-  const connected = checkedAt && !feedError;
+export function SportApiPanel({ snapshot, connectionError, kickoff, period, busy, onTogglePolling }) {
+  const { live, checkedAt, remaining, interval, error, polling } = snapshot;
+  const feedError = connectionError || (polling ? error : null);
+  const connected = polling && checkedAt && !feedError;
   const hasScore = live?.home != null && live?.away != null;
   const beforeKickoff = !live || live.status === 'Scheduled';
   const liveMinute = live?.status === 'LIVE' && live.minute;
@@ -48,7 +49,7 @@ export function SportApiPanel({ snapshot, connectionError, kickoff, period }) {
           )}
         >
           <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-          {connectionError ? 'Offline' : error ? 'Perlu dicek' : connected ? 'Tersambung' : 'Menunggu'}
+          {connectionError ? 'Offline' : !polling ? 'Berhenti' : error ? 'Perlu dicek' : connected ? 'Tersambung' : 'Menunggu'}
         </Badge>
       </CardHeader>
 
@@ -70,6 +71,18 @@ export function SportApiPanel({ snapshot, connectionError, kickoff, period }) {
           <FeedDetail label="Interval saat live">{interval} detik</FeedDetail>
         </dl>
       </CardContent>
+
+      <div className="flex items-center justify-between gap-4 border-t border-border px-5 py-3 max-[38rem]:flex-col max-[38rem]:items-start sm:px-6">
+        <p className="m-0 text-sm text-muted-foreground">
+          {polling
+            ? 'Polling aktif. Tiap pengecekan memakai satu request kuota.'
+            : 'Polling berhenti. Tidak ada request ke SportAPI. Skor diatur manual.'}
+        </p>
+        <Button type="button" variant={polling ? 'outline' : 'default'} disabled={busy} onClick={() => onTogglePolling(!polling)}>
+          {polling ? <PauseIcon aria-hidden="true" /> : <PlayIcon aria-hidden="true" />}
+          {polling ? 'Hentikan polling' : 'Mulai polling'}
+        </Button>
+      </div>
 
       {feedError && (
         <div className="flex items-start gap-2 border-t border-border px-5 py-3 text-sm text-destructive sm:px-6" role="status">

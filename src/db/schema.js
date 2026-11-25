@@ -5,6 +5,7 @@ export const scoreboards = pgTable('scoreboards', {
   matchDate: text().primaryKey(),
   instance: uuid().notNull().defaultRandom(),
   revision: integer().notNull().default(0),
+  polling: boolean().notNull().default(true),
   mode: text().notNull().default('auto'),
   manual: jsonb().notNull().default({ home: 0, away: 0, status: 'Scheduled', minute: null }),
   live: jsonb(),

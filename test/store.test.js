@@ -93,3 +93,20 @@ test('postgres: state survives a new store instance (redeploy)', async () => {
   assert.equal(snapshot.score.home, 1);
   assert.equal(snapshot.mode, 'manual');
 });
+
+for (const [name, create] of Object.entries(stores)) {
+  test(`${name}: stopping polling blocks SportAPI and holds the score`, async () => {
+    const store = await create();
+    const stopped = await store.control({ type: 'polling', enabled: false });
+    assert.equal(stopped.state.polling, false);
+    assert.equal(stopped.state.mode, 'manual');
+    assert.equal(await store.claimPoll(Date.now() + 3_600_000), null);
+    assert.match((await store.control({ type: 'auto' })).error, /Mulai polling/);
+    assert.ok((await store.control({ type: 'polling', enabled: 'yes' })).error);
+
+    const started = await store.control({ type: 'polling', enabled: true });
+    assert.equal(started.state.polling, true);
+    assert.ok(await store.claimPoll());
+    assert.equal(toSnapshot((await store.load())).polling, true);
+  });
+}

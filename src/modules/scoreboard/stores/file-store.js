@@ -19,6 +19,7 @@ export function createFileStore(matchDate, directory = join(process.cwd(), '.sco
   const state = {
     ...emptyState(),
     instance: randomUUID(),
+    polling: saved.polling !== false,
     mode: saved.mode === 'manual' ? 'manual' : 'auto',
     manual: saved.manual ?? emptyState().manual,
     live: saved.live ?? null,
@@ -29,7 +30,7 @@ export function createFileStore(matchDate, directory = join(process.cwd(), '.sco
   function persist() {
     try {
       mkdirSync(directory, { recursive: true });
-      writeFileSync(`${path}.tmp`, JSON.stringify({ mode: state.mode, manual: state.manual, live: state.live }));
+      writeFileSync(`${path}.tmp`, JSON.stringify({ mode: state.mode, manual: state.manual, polling: state.polling, live: state.live }));
       renameSync(`${path}.tmp`, path);
       storageError = null;
     } catch {
@@ -45,7 +46,7 @@ export function createFileStore(matchDate, directory = join(process.cwd(), '.sco
     },
 
     async claimPoll(now = Date.now()) {
-      if (state.finished || now < state.nextCheckAt) return null;
+      if (!state.polling || state.finished || now < state.nextCheckAt) return null;
       state.nextCheckAt = now + pollLeaseMs;
       return { ...state };
     },
@@ -63,6 +64,7 @@ export function createFileStore(matchDate, directory = join(process.cwd(), '.sco
       if (result.changed) {
         state.mode = result.mode;
         state.manual = result.manual;
+        state.polling = result.polling;
         state.revision += 1;
         persist();
       }

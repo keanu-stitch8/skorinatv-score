@@ -7,6 +7,7 @@ function toState(row) {
     ...emptyState(),
     instance: row.instance,
     revision: row.revision,
+    polling: row.polling,
     mode: row.mode === 'manual' ? 'manual' : 'auto',
     manual: row.manual,
     live: row.live,
@@ -25,7 +26,7 @@ export function createPostgresStore(db, matchDate) {
   let ready;
 
   function ensureRow() {
-    ready ??= db.insert(scoreboards).values({ matchDate }).onConflictDoNothing().catch((error) => {
+    ready ??= db.insert(scoreboards).values({ matchDate, nextCheckAt: new Date(0) }).onConflictDoNothing().catch((error) => {
       ready = undefined;
       throw error;
     });
@@ -39,12 +40,12 @@ export function createPostgresStore(db, matchDate) {
       return toState(row);
     },
 
-    /** Takes the poll lease atomically. Only one instance gets a row back per due check. */
+    /** Takes the poll lease atomically. Only one instance gets a row back per due check, none while polling is stopped. */
     async claimPoll(now = Date.now()) {
       await ensureRow();
       const [row] = await db.update(scoreboards)
         .set({ nextCheckAt: new Date(now + pollLeaseMs) })
-        .where(and(where, eq(scoreboards.finished, false), lte(scoreboards.nextCheckAt, new Date(now))))
+        .where(and(where, eq(scoreboards.finished, false), eq(scoreboards.polling, true), lte(scoreboards.nextCheckAt, new Date(now))))
         .returning();
       return row ? toState(row) : null;
     },
@@ -75,6 +76,7 @@ export function createPostgresStore(db, matchDate) {
         const [updated] = await tx.update(scoreboards).set({
           mode: result.mode,
           manual: result.manual,
+          polling: result.polling,
           revision: sql`${scoreboards.revision} + 1`,
           updatedAt: new Date(),
         }).where(where).returning();

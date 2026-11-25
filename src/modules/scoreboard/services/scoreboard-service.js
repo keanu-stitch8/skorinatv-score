@@ -11,6 +11,7 @@ export function emptyState() {
   return {
     instance: null,
     revision: 0,
+    polling: true,
     mode: 'auto',
     manual: { home: 0, away: 0, status: 'Scheduled', minute: null },
     live: null,
@@ -134,7 +135,7 @@ export async function pollFixture(state, key = sportApiKey()) {
 
 function autoAvailable(state) {
   const live = currentLive(state);
-  return Boolean(sportApiKey() && !state.error && state.checkedAt &&
+  return Boolean(sportApiKey() && state.polling && !state.error && state.checkedAt &&
     live && (live.status === 'Scheduled' || live.status === 'Cancelled' ||
       (live.home !== null && live.away !== null)));
 }
@@ -145,6 +146,7 @@ export function toSnapshot(state, storageError = null) {
   return {
     instance: state.instance,
     mode: state.mode,
+    polling: state.polling,
     canAuto: autoAvailable(state),
     score: (state.mode === 'manual' ? state.manual : live) ?? {
       home: null, away: null, status: 'Scheduled', minute: null,
@@ -160,14 +162,27 @@ export function toSnapshot(state, storageError = null) {
 }
 
 /**
- * Applies one operator action to the mode and manual score.
- * @returns {{mode: string, manual: object, changed: boolean} | {error: string}}
+ * Applies one operator action to the mode, manual score and SportAPI polling switch.
+ * @returns {{mode: string, manual: object, polling: boolean, changed: boolean} | {error: string}}
  */
 export function applyControl(state, action) {
+  const unchanged = { mode: state.mode, manual: state.manual, polling: state.polling, changed: false };
+
+  if (action?.type === 'polling') {
+    if (typeof action.enabled !== 'boolean') return { error: 'Status polling tidak valid.' };
+    if (action.enabled === state.polling) return unchanged;
+    // Kembali ke manual saat polling dihentikan, agar skor di layar tidak membeku di data feed lama.
+    if (!action.enabled && state.mode === 'auto') {
+      return { ...applyControl(state, { type: 'hold' }), polling: false };
+    }
+    return { ...unchanged, polling: action.enabled, changed: true };
+  }
+
   if (action?.type === 'auto') {
-    if (state.mode === 'auto') return { mode: state.mode, manual: state.manual, changed: false };
+    if (state.mode === 'auto') return unchanged;
+    if (!state.polling) return { error: 'Mulai polling SportAPI dulu sebelum kembali ke otomatis.' };
     if (!autoAvailable(state)) return { error: 'Tunggu sampai SportAPI mengirim data laga yang valid.' };
-    return { mode: 'auto', manual: state.manual, changed: true };
+    return { ...unchanged, mode: 'auto', changed: true };
   }
 
   if (action?.type !== 'hold' && action?.type !== 'adjust' && action?.type !== 'period') {
@@ -201,5 +216,5 @@ export function applyControl(state, action) {
     manual.status = action.status;
   }
 
-  return { mode: 'manual', manual, changed: true };
+  return { mode: 'manual', manual, polling: state.polling, changed: true };
 }

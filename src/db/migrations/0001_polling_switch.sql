@@ -1,0 +1,1 @@
+ALTER TABLE "scoreboards" ADD COLUMN "polling" boolean DEFAULT true NOT NULL;

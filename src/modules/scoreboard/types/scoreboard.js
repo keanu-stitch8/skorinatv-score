@@ -5,6 +5,7 @@
  * @property {string} instance
  * @property {number} revision
  * @property {'auto' | 'manual'} mode
+ * @property {boolean} polling Operator switch. False means no SportAPI requests.
  * @property {boolean} canAuto
  * @property {Score} score
  * @property {LiveFixture | null} live
