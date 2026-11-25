@@ -60,7 +60,7 @@ export function useScoreboard(initial, { pauseWhenHidden = false } = {}) {
     retry: false,
   });
 
-  const connectionError = isError ? 'Koneksi ke app lokal terputus. Skor terakhir tetap tampil.' : null;
+  const connectionError = isError ? 'Koneksi ke server scoreboard terputus. Skor terakhir tetap tampil.' : null;
   return { snapshot, connectionError };
 }
 

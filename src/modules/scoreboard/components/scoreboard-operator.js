@@ -15,8 +15,8 @@ const controls = [
   { side: 'away', team: match.away, plus: '2', minus: '4' },
 ];
 
-/** @param {{initial: import('../types/scoreboard.js').ScoreboardSnapshot}} props */
-export default function ScoreboardOperator({ initial }) {
+/** @param {{initial: import('../types/scoreboard.js').ScoreboardSnapshot, logout?: boolean}} props */
+export default function ScoreboardOperator({ initial, logout = false }) {
   const { snapshot, connectionError } = useScoreboard(initial, { pauseWhenHidden: true });
   const { send, busy, actionError } = useScoreboardControl();
   const { score, live, mode, canAuto, storageError } = snapshot;
@@ -45,9 +45,16 @@ export default function ScoreboardOperator({ initial }) {
           <h1 className="m-0 text-[clamp(1.65rem,4vw,2.7rem)] font-bold tracking-[-.04em]">Kontrol scoreboard</h1>
           <p className="m-0 mt-1.5 text-muted-foreground">{match.kickoff}</p>
         </div>
-        <Button variant="outline" asChild>
-          <a href="/scoreboard" target="_blank" rel="noreferrer">Buka videotron</a>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <a href="/scoreboard" target="_blank" rel="noreferrer">Buka videotron</a>
+          </Button>
+          {logout && (
+            <form method="post" action="/api/logout">
+              <Button type="submit" variant="ghost">Keluar</Button>
+            </form>
+          )}
+        </div>
       </header>
 
       <Card className="border-border" role="region" aria-label="Skor yang tampil">

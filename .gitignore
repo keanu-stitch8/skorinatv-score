@@ -4,3 +4,5 @@
 !/.env.example
 /.scoreboard/
 /.DS_Store
+.neon
+.vercel

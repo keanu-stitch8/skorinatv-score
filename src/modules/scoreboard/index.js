@@ -1,5 +1,5 @@
 import ScoreboardView from './views/scoreboard-view';
 
-export default function Scoreboard({ output = false }) {
-  return <ScoreboardView output={output} />;
+export default function Scoreboard({ output = false, logout = false }) {
+  return <ScoreboardView output={output} logout={logout} />;
 }

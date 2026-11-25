@@ -1,10 +1,10 @@
 import { Suspense } from 'react';
 import ScoreboardSection from '../sections/scoreboard-section';
 
-export default function ScoreboardView({ output }) {
+export default function ScoreboardView({ output, logout }) {
   const content = (
     <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
-      <ScoreboardSection output={output} />
+      <ScoreboardSection output={output} logout={logout} />
     </Suspense>
   );
 

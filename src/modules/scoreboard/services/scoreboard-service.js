@@ -1,61 +1,40 @@
-import 'server-only';
+import { fetchFixture, fetchFixtures } from '../api/sportapi.js';
+import { manualPeriods, match } from '../lib/match.js';
+import { isTarget, mapFixture } from '../mappers/fixture.js';
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { fetchFixture, fetchFixtures } from '../api/sportapi';
-import { manualPeriods, match } from '../lib/match';
-import { isTarget, mapFixture } from '../mappers/fixture';
-
-const stateDirectory = join(process.cwd(), '.scoreboard');
-const statePath = join(stateDirectory, `${match.date}.json`);
 const terminalPeriods = ['FT', 'AET', 'PENS', 'Cancelled'];
 
-function restore() {
-  try {
-    return JSON.parse(readFileSync(statePath, 'utf8')) ?? {};
-  } catch {
-    return {};
-  }
-}
+/** Lease for one upstream check. Other instances skip SportAPI until it expires. */
+export const pollLeaseMs = 30_000;
 
-function createState() {
-  const saved = restore();
-  const configuredId = process.env.SPORTAPI_FIXTURE_ID?.trim();
-  const live = !configuredId || String(saved.live?.id) === configuredId ? saved.live : null;
-
+export function emptyState() {
   return {
-    instance: randomUUID(),
-    mode: saved.mode === 'manual' ? 'manual' : 'auto',
-    manual: saved.manual ?? { home: 0, away: 0, status: 'Scheduled', minute: null },
-    live: live ?? null,
-    fixtureId: configuredId || live?.id || null,
+    instance: null,
+    revision: 0,
+    mode: 'auto',
+    manual: { home: 0, away: 0, status: 'Scheduled', minute: null },
+    live: null,
+    fixtureId: null,
     checkedAt: null,
     finished: false,
     nextCheckAt: 0,
     error: null,
-    storageError: null,
     remaining: null,
-    revision: 0,
   };
 }
 
-// One upstream poll and one score for every local browser in this process.
-const state = globalThis[Symbol.for('skorina-tv.match')] ??= createState();
+function configuredFixtureId() {
+  return process.env.SPORTAPI_FIXTURE_ID?.trim() || null;
+}
 
-function save() {
-  try {
-    mkdirSync(stateDirectory, { recursive: true });
-    writeFileSync(`${statePath}.tmp`, JSON.stringify({
-      mode: state.mode,
-      manual: state.manual,
-      live: state.live,
-    }));
-    renameSync(`${statePath}.tmp`, statePath);
-    state.storageError = null;
-  } catch {
-    state.storageError = 'Skor aktif, tetapi penyimpanan lokal gagal.';
-  }
+export function sportApiKey() {
+  return process.env.SPORTAPI_KEY?.trim() || null;
+}
+
+/** Ignores a saved fixture that no longer matches SPORTAPI_FIXTURE_ID. */
+function currentLive(state) {
+  const configuredId = configuredFixtureId();
+  return !configuredId || String(state.live?.id) === configuredId ? state.live : null;
 }
 
 function liveInterval() {
@@ -73,157 +52,154 @@ function retryTime(response) {
   return Math.max(Date.now() + 30_000, time || Date.now() + 60_000);
 }
 
-function keyForNextCheck() {
-  const key = process.env.SPORTAPI_KEY?.trim();
-  return key && !state.finished && Date.now() >= state.nextCheckAt ? key : null;
-}
+/**
+ * Checks SportAPI once and returns the new feed fields. Mode and manual score are never touched,
+ * so a store can save the result without overwriting an operator change made during the request.
+ */
+export async function pollFixture(state, key = sportApiKey()) {
+  const poll = {
+    live: currentLive(state),
+    fixtureId: configuredFixtureId() || state.fixtureId || null,
+    checkedAt: state.checkedAt,
+    finished: state.finished,
+    nextCheckAt: Date.now() + pollLeaseMs,
+    error: state.error,
+    remaining: state.remaining,
+  };
 
-export async function refreshScore() {
-  const key = keyForNextCheck();
-  if (!key) return;
-
-  state.nextCheckAt = Date.now() + 30_000;
-  if (state.fixtureId && !/^\d+$/.test(String(state.fixtureId))) {
-    state.error = 'SPORTAPI_FIXTURE_ID harus angka.';
-    state.revision += 1;
-    return;
+  if (poll.fixtureId && !/^\d+$/.test(String(poll.fixtureId))) {
+    return { ...poll, error: 'SPORTAPI_FIXTURE_ID harus angka.' };
   }
 
   try {
-    const response = state.fixtureId
-      ? await fetchFixture(state.fixtureId, key)
+    const response = poll.fixtureId
+      ? await fetchFixture(poll.fixtureId, key)
       : await fetchFixtures(match.date, key);
 
     const remaining = response.headers.get('x-ratelimit-remaining');
     if (remaining !== null && /^\d+$/.test(remaining)) {
-      state.remaining = Number(remaining);
+      poll.remaining = Number(remaining);
     }
 
     if (response.status === 429) {
-      state.nextCheckAt = retryTime(response);
-      state.error = 'Kuota SportAPI habis. Pakai kontrol manual sementara.';
-      return;
+      return { ...poll, nextCheckAt: retryTime(response), error: 'Kuota SportAPI habis. Pakai kontrol manual sementara.' };
     }
 
     if (response.status === 401 || response.status === 403) {
-      state.nextCheckAt = Date.now() + 60_000;
-      state.error = 'SportAPI menolak API key. Cek SPORTAPI_KEY di .env.local.';
-      return;
+      return { ...poll, nextCheckAt: Date.now() + 60_000, error: 'SportAPI menolak API key. Cek SPORTAPI_KEY di environment server.' };
     }
 
-    if (response.status === 404 && !process.env.SPORTAPI_FIXTURE_ID?.trim()) {
-      state.fixtureId = null;
+    if (response.status === 404 && !configuredFixtureId()) {
+      poll.fixtureId = null;
     }
 
     if (!response.ok) {
-      state.error = `SportAPI mengembalikan HTTP ${response.status}.`;
-      return;
+      return { ...poll, error: `SportAPI mengembalikan HTTP ${response.status}.` };
     }
 
     const payload = await response.json();
-    if (payload?.success !== true || (!state.fixtureId && !Array.isArray(payload.data))) {
-      state.error = 'Format respons SportAPI tidak valid.';
-      return;
+    if (payload?.success !== true || (!poll.fixtureId && !Array.isArray(payload.data))) {
+      return { ...poll, error: 'Format respons SportAPI tidak valid.' };
     }
 
-    const fixture = state.fixtureId ? payload.fixture : payload.data.find(isTarget);
+    const fixture = poll.fixtureId ? payload.fixture : payload.data.find(isTarget);
 
-    if (!isTarget(fixture) || (state.fixtureId && String(fixture.id) !== String(state.fixtureId))) {
-      state.error = state.fixtureId
-        ? 'Fixture ID ini tidak cocok dengan jadwal Persib vs FC Seoul.'
-        : 'Pertandingan belum ditemukan di SportAPI.';
-      return;
+    if (!isTarget(fixture) || (poll.fixtureId && String(fixture.id) !== String(poll.fixtureId))) {
+      return {
+        ...poll,
+        error: poll.fixtureId
+          ? 'Fixture ID ini tidak cocok dengan jadwal Persib vs FC Seoul.'
+          : 'Pertandingan belum ditemukan di SportAPI.',
+      };
     }
 
-    const live = mapFixture(fixture, state.live);
-    if (!live) {
-      state.error = 'SportAPI mengirim fixture yang tidak valid.';
-      return;
-    }
+    const live = mapFixture(fixture, poll.live);
+    if (!live) return { ...poll, error: 'SportAPI mengirim fixture yang tidak valid.' };
 
-    state.checkedAt = new Date().toISOString();
-    state.fixtureId = live.id;
-    state.finished = live.status === 'Cancelled' || (terminalPeriods.includes(live.status) &&
-      Number.isSafeInteger(fixture.home_score) && fixture.home_score >= 0 &&
-      Number.isSafeInteger(fixture.away_score) && fixture.away_score >= 0);
-    state.error = null;
-    state.nextCheckAt = Date.now() + (live.status === 'LIVE' ? liveInterval() : 30) * 1000;
-
-    if (JSON.stringify(live) !== JSON.stringify(state.live)) {
-      state.live = live;
-      save();
-    }
+    return {
+      ...poll,
+      live,
+      fixtureId: String(live.id),
+      checkedAt: new Date().toISOString(),
+      finished: live.status === 'Cancelled' || (terminalPeriods.includes(live.status) &&
+        Number.isSafeInteger(fixture.home_score) && fixture.home_score >= 0 &&
+        Number.isSafeInteger(fixture.away_score) && fixture.away_score >= 0),
+      error: null,
+      nextCheckAt: Date.now() + (live.status === 'LIVE' ? liveInterval() : 30) * 1000,
+    };
   } catch {
-    state.error = 'SportAPI belum bisa dihubungi. Skor terakhir tetap tampil.';
-  } finally {
-    state.revision += 1;
+    return { ...poll, error: 'SportAPI belum bisa dihubungi. Skor terakhir tetap tampil.' };
   }
 }
 
-function autoAvailable() {
-  return Boolean(process.env.SPORTAPI_KEY?.trim() && !state.error && state.checkedAt &&
-    state.live && (state.live.status === 'Scheduled' || state.live.status === 'Cancelled' ||
-      (state.live.home !== null && state.live.away !== null)));
+function autoAvailable(state) {
+  const live = currentLive(state);
+  return Boolean(sportApiKey() && !state.error && state.checkedAt &&
+    live && (live.status === 'Scheduled' || live.status === 'Cancelled' ||
+      (live.home !== null && live.away !== null)));
 }
 
 /** @returns {import('../types/scoreboard.js').ScoreboardSnapshot} */
-export function snapshot() {
-  const configured = Boolean(process.env.SPORTAPI_KEY?.trim());
+export function toSnapshot(state, storageError = null) {
+  const live = currentLive(state);
   return {
     instance: state.instance,
     mode: state.mode,
-    canAuto: autoAvailable(),
-    score: (state.mode === 'manual' ? state.manual : state.live) ?? {
+    canAuto: autoAvailable(state),
+    score: (state.mode === 'manual' ? state.manual : live) ?? {
       home: null, away: null, status: 'Scheduled', minute: null,
     },
-    live: state.live,
+    live,
     checkedAt: state.checkedAt,
     remaining: state.remaining,
     interval: liveInterval(),
-    error: configured ? state.error : 'Isi SPORTAPI_KEY di .env.local untuk mengaktifkan skor otomatis.',
-    storageError: state.storageError,
+    error: sportApiKey() ? state.error : 'Isi SPORTAPI_KEY di environment server untuk mengaktifkan skor otomatis.',
+    storageError,
     revision: state.revision,
   };
 }
 
-export function control(action) {
+/**
+ * Applies one operator action to the mode and manual score.
+ * @returns {{mode: string, manual: object, changed: boolean} | {error: string}}
+ */
+export function applyControl(state, action) {
   if (action?.type === 'auto') {
-    if (state.mode === 'auto') return snapshot();
-    if (!autoAvailable()) return { error: 'Tunggu sampai SportAPI mengirim data laga yang valid.' };
+    if (state.mode === 'auto') return { mode: state.mode, manual: state.manual, changed: false };
+    if (!autoAvailable(state)) return { error: 'Tunggu sampai SportAPI mengirim data laga yang valid.' };
+    return { mode: 'auto', manual: state.manual, changed: true };
+  }
 
-    state.mode = 'auto';
-  } else if (action?.type === 'hold' || action?.type === 'adjust' || action?.type === 'period') {
-    if (action.type === 'adjust' &&
-      (!['home', 'away'].includes(action.side) || ![-1, 1].includes(action.delta))) {
-      return { error: 'Perubahan skor tidak valid.' };
-    }
-
-    if (action.type === 'period' && !manualPeriods.includes(action.status)) {
-      return { error: 'Status pertandingan tidak valid.' };
-    }
-
-    if (state.mode === 'auto') {
-      const live = state.live;
-      state.manual = {
-        home: live?.home ?? 0,
-        away: live?.away ?? 0,
-        status: manualPeriods.includes(live?.status) ? live.status : 'Scheduled',
-        minute: null,
-      };
-      state.mode = 'manual';
-    }
-
-    if (action.type === 'adjust') {
-      state.manual[action.side] = Math.max(0, state.manual[action.side] + action.delta);
-      if (action.delta > 0 && state.manual.status === 'Scheduled') state.manual.status = 'LIVE';
-    } else if (action.type === 'period') {
-      state.manual.status = action.status;
-    }
-  } else {
+  if (action?.type !== 'hold' && action?.type !== 'adjust' && action?.type !== 'period') {
     return { error: 'Aksi tidak dikenal.' };
   }
 
-  state.revision += 1;
-  save();
-  return snapshot();
+  if (action.type === 'adjust' &&
+    (!['home', 'away'].includes(action.side) || ![-1, 1].includes(action.delta))) {
+    return { error: 'Perubahan skor tidak valid.' };
+  }
+
+  if (action.type === 'period' && !manualPeriods.includes(action.status)) {
+    return { error: 'Status pertandingan tidak valid.' };
+  }
+
+  let manual = { ...state.manual };
+  if (state.mode === 'auto') {
+    const live = currentLive(state);
+    manual = {
+      home: live?.home ?? 0,
+      away: live?.away ?? 0,
+      status: manualPeriods.includes(live?.status) ? live.status : 'Scheduled',
+      minute: null,
+    };
+  }
+
+  if (action.type === 'adjust') {
+    manual[action.side] = Math.max(0, manual[action.side] + action.delta);
+    if (action.delta > 0 && manual.status === 'Scheduled') manual.status = 'LIVE';
+  } else if (action.type === 'period') {
+    manual.status = action.status;
+  }
+
+  return { mode: 'manual', manual, changed: true };
 }
