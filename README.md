@@ -104,7 +104,7 @@ Latar adalah artwork `public/stats/background.png` (1670×941) tanpa perubahan. 
 
 ### Versi GT Title (PSD)
 
-`Skorina-Statistik-Persib-vs-Seoul.psd` (1920×1080, 8-bit) berisi artwork sebagai satu layer gambar dan 30 layer teks asli dalam folder satu tingkat. Import teks sebagai field data memerlukan vMix edisi Advanced atau lebih tinggi. Font teks adalah Segoe UI Semibold dan Segoe UI Black, yang tersedia di Windows.
+`Skorina-Statistik-Persib-vs-Seoul.psd` (1920×1080, 8-bit) berisi artwork sebagai satu layer gambar dan 30 layer teks asli dalam folder satu tingkat. Import teks sebagai field data memerlukan vMix edisi Advanced atau lebih tinggi. Font teks adalah Arial Bold dan Arial Black (skor), yang tersedia di Windows dan macOS.
 
 Tambahkan data source JSON berikut di vMix. Nama kolomnya sama dengan nama layer, misalnya `Skor_Persib`, `Persib_Tembakan`, `Seoul_Umpan`, dan `Persib_KartuKuning`.
 
@@ -113,6 +113,16 @@ https://skorina-tv.vercel.app/api/stats?format=vmix
 ```
 
 Panjang bar perbandingan tidak bisa mengikuti data di GT, jadi PSD hanya berisi track abu-abunya. Gunakan input Web Browser `/stats` bila bar dinamis diperlukan.
+
+Buat ulang PSD dengan `npm run gt:psd`. Hasilnya ada di `dist/` (diabaikan Git). Skrip memakai `public/stats/background.png` dan geometri yang sama dengan halaman `/stats` (`src/modules/scoreboard/lib/stats-layout.js`), sedangkan nama layer diambil dari kolom JSON vMix. Pratinjau teks digambar oleh `scripts/gt-psd/render.py`, yang butuh Python dengan Pillow dan numpy (`PYTHON=/path/ke/python npm run gt:psd`).
+
+```sh
+npm run gt:psd                                   # tanpa folder, kotak teks
+npm run gt:psd -- dist/stat-point.psd --point-text   # point text
+npm run gt:psd -- dist/stat-folder.psd --folders     # dengan folder
+```
+
+Default-nya tanpa folder, karena layer di dalam folder bisa hilang saat import di GT.
 
 ## API lokal dan SportAPI.ai
 

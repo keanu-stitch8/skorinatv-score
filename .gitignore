@@ -6,3 +6,4 @@
 /.DS_Store
 .neon
 .vercel
+/dist/
